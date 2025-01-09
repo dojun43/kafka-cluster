@@ -1,11 +1,5 @@
-# VPC 생성
-resource "google_compute_network" "kafka_network" {
-  name = "kafka-network"
-}
-
-
-
 # 고정 ip
+
 resource "google_compute_address" "kafka-node1-static-ip" {
   name   = "kafka-node1-static-ip"
   project = var.project
@@ -26,65 +20,11 @@ resource "google_compute_address" "kafka-node3-static-ip" {
 
 
 
-# 방화벽 정책
-resource "google_compute_firewall" "allow-ssh" {
-  name    = "allow-ssh"
-  project = var.project
-  network = google_compute_network.kafka_network.name
+# instances
 
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
-  }
-
-  source_ranges = ["0.0.0.0/0"] 
-  target_tags   = ["allow-ssh"]
-}
-
-resource "google_compute_firewall" "allow-kafka-ports" {
-  name    = "allow-kafka-ports"
-  project = var.project
-  network = google_compute_network.kafka_network.name
-
-  allow {
-    protocol = "tcp"
-    ports    = ["29092", "9000"]
-  }
-
-  source_ranges = ["0.0.0.0/0"] 
-  target_tags   = ["allow-kafka-ports"]
-}
-
-
-
-# disk
-resource "google_compute_disk" "kafka-node1-disk" {
-  name  = "kafka-node1-disk"
-  zone  =  var.zone
-  size  = 100 
-  type  = "pd-standard"
-}
-
-resource "google_compute_disk" "kafka-node2-disk" {
-  name  = "kafka-node2-disk"
-  zone  =  var.zone
-  size  = 100 
-  type  = "pd-standard"
-}
-
-resource "google_compute_disk" "kafka-node3-disk" {
-  name  = "kafka-node3-disk"
-  zone  =  var.zone
-  size  = 100 
-  type  = "pd-standard"
-}
-
-
-
-# VM
 resource "google_compute_instance" "kafka-node1" {
   name         = "kafka-node1"
-  machine_type = "e2-small"
+  machine_type = "e2-medium"
   zone         = var.zone
 
   boot_disk {
@@ -100,6 +40,8 @@ resource "google_compute_instance" "kafka-node1" {
 
   network_interface {
     network = google_compute_network.kafka_network.name
+    subnetwork = google_compute_subnetwork.kafka_subnet.name
+    network_ip = "192.168.0.2"
     access_config {
       nat_ip = google_compute_address.kafka-node1-static-ip.address
     }
@@ -107,12 +49,12 @@ resource "google_compute_instance" "kafka-node1" {
 
   metadata_startup_script = file("startup_script.sh")
 
-  tags = ["allow-ssh", "allow-kafka-ports"]
+  tags = ["allow-ssh", "allow-icmp", "allow-kafka-ports","allow-kafka-inner-ports"]
 }
 
 resource "google_compute_instance" "kafka-node2" {
   name         = "kafka-node2"
-  machine_type = "e2-small"
+  machine_type = "e2-medium"
   zone         = var.zone
 
   boot_disk {
@@ -128,19 +70,22 @@ resource "google_compute_instance" "kafka-node2" {
 
   network_interface {
     network = google_compute_network.kafka_network.name
+    subnetwork = google_compute_subnetwork.kafka_subnet.name
+    network_ip = "192.168.0.3"
     access_config {
       nat_ip = google_compute_address.kafka-node2-static-ip.address
     }
+
   }
 
   metadata_startup_script = file("startup_script.sh")
 
-  tags = ["allow-ssh", "allow-kafka-ports"]
+  tags = ["allow-ssh", "allow-icmp", "allow-kafka-ports","allow-kafka-inner-ports"] 
 }
 
 resource "google_compute_instance" "kafka-node3" {
   name         = "kafka-node3"
-  machine_type = "e2-small"
+  machine_type = "e2-medium"
   zone         = var.zone
 
   boot_disk {
@@ -156,6 +101,8 @@ resource "google_compute_instance" "kafka-node3" {
 
   network_interface {
     network = google_compute_network.kafka_network.name
+    subnetwork = google_compute_subnetwork.kafka_subnet.name
+    network_ip = "192.168.0.4"
     access_config {
       nat_ip = google_compute_address.kafka-node3-static-ip.address
     }
@@ -163,5 +110,5 @@ resource "google_compute_instance" "kafka-node3" {
 
   metadata_startup_script = file("startup_script.sh")
 
-  tags = ["allow-ssh", "allow-kafka-ports"]
+  tags = ["allow-ssh", "allow-icmp", "allow-kafka-ports","allow-kafka-inner-ports"]
 }

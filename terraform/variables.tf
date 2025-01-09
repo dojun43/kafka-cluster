@@ -15,7 +15,7 @@ variable "region" {
 }
 
 
-# main
+# zone
 
 variable "zone" {
   default = "asia-northeast3-b" 

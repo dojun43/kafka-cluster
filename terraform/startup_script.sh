@@ -38,13 +38,8 @@ echo "End Docker installation" >> /var/log/startup_script.log
 
 
 ## setup
-sudo mkdir -p /data/zookeeper/data 
-sudo mkdir -p /data/zookeeper/log
-sudo mkdir -p /data/kafka/data
-
-sudo chown -R 1000:1000 /data/zookeeper/data  
-sudo chown -R 1000:1000 /data/zookeeper/log
-sudo chown -R 1000:1000 /data/kafka/data
+sudo mkdir -p /data/kafka
+sudo chown -R 1000:1000 /data/kafka
 
 cd /data
 git clone https://github.com/dojun43/kafka-cluster.git
