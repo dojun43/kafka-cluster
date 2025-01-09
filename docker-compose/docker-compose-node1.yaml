@@ -1,64 +1,39 @@
 services:
-  zookeeper1:
-    image: confluentinc/cp-zookeeper:7.0.9
-    hostname: zookeeper1
-    container_name: zookeeper1
-    ports:
-      - "2181:2181"
-      - "2888:2888"
-      - "3888:3888"
-    environment:
-      ZOOKEEPER_SERVER_ID: 1
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2
-      ZOOKEEPER_SERVERS: "${NODE1_IP}:2888:3888,${NODE2_IP}:2888:3888,${NODE3_IP}:2888:3888"
-
-    volumes:
-      - /data/zookeeper/data:/var/lib/zookeeper/data
-      - /data/zookeeper/log:/var/lib/zookeeper/log
-
   broker1:
-    image: confluentinc/cp-server:7.0.9
-    hostname: broker1
+    image: docker.io/bitnami/kafka:3.9
     container_name: broker1
-    depends_on:
-      - zookeeper1
-    ports:  
-      - "29092:29092"
-      - "9101:9101"
-      - "9092:9092"
+    network_mode: "host"
+    hostname: localhost
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: ${NODE1_IP}:2181,${NODE2_IP}:2181,${NODE3_IP}:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${NODE1_IP}:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
-      KAFKA_LISTENER_PORT: 9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost
-      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker1:9092
-      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
-      CONFLUENT_METRICS_ENABLE: 'true'
-      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
-    volumes:
-      - /data/kafka/data:/var/lib/kafka/data
+      # KRaft settings
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@${NODE1_INTERNAL_IP}:9093,2@${NODE2_INTERNAL_IP}:9093,3@${NODE3_INTERNAL_IP}:9093
+      - KAFKA_KRAFT_CLUSTER_ID=testclusterid
 
+      # Listeners
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://${NODE1_INTERNAL_IP}:9092,EXTERNAL://${NODE1_EXTERNAL_IP}:29092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+
+      # Clustering
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=2
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+    volumes:
+      - /data/kafka:/bitnami/kafka
+      
   kafka-ui:
-    image: provectuslabs/kafka-ui
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    network_mode: "host"
+    hostname: localhost
     depends_on:
-      - zookeeper1
       - broker1
-    ports:
-      - "9000:8080"
     environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: ${NODE1_IP}:9092,${NODE2_IP}:9092,${NODE3_IP}:9092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: ${NODE1_IP}:2181,${NODE2_IP}:2181,${NODE3_IP}:2181
+      KAFKA_CLUSTERS_0_NAME: testcluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: ${NODE1_INTERNAL_IP}:9092,${NODE2_INTERNAL_IP}:9092,${NODE3_INTERNAL_IP}:9092
+      SERVER_PORT: 9000
