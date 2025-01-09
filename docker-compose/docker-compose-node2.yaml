@@ -4,7 +4,7 @@ services:
     container_name: broker2
     network_mode: "host"
     hostname: localhost
-    user: "1000:1000"
+    user: "1000"
     environment:
       # KRaft settings
       - KAFKA_ENABLE_KRAFT=yes
