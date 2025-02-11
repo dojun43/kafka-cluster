@@ -1,4 +1,5 @@
 .venv
+.DS_Store
 private
 /terraform/.terraform*
 /terraform/terraform*
