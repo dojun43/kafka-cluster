@@ -1,0 +1,8 @@
+.venv
+private
+/terraform/.terraform*
+/terraform/terraform*
+README.md
+pyproject.toml
+uv.lock
+test
